@@ -4,14 +4,6 @@ const app = express();
 const Schema = mongoose.Schema;
 const data = require('./data.js');
 
-
-mongoose.connect('mongodb://localhost/recipeApp')
-	.then(() => {
-		console.log('Connected to Mongo!')
-	}).catch(err => {
-		console.error('Error connecting to mongo', err)
-	});
-
 const recipeSchema = new Schema({
 	title: String,
 	level: {
@@ -43,33 +35,43 @@ const recipeSchema = new Schema({
 
 const Recipe = mongoose.model('Recipe', recipeSchema);
 
-Recipe.collection.drop();
-
-Recipe.insertMany(data)
-	.then((data) => {
-		return Recipe.findOneAndUpdate({ title: 'Rigatoni alla Genovese'}, { duration: 100}, { new: true })
-			.then((recipe) => { return recipe.save(); })
-			.then(() => { console.log('Updated duration'); })
-			.catch((e) => { console.log('Error', e); });
-	})
+mongoose.connect('mongodb://localhost/recipeApp')
 	.then(() => {
-		return Recipe.deleteOne( {title: 'Carrot Cake'})
-			.then(() => {
-				console.log('Deleted Carrot Cake'); 
-				mongoose.disconnect();
+		console.log('Connected to Mongo!');
+
+		Recipe.collection.drop();
+
+		Recipe.insertMany(data)
+			.then((data) => {
+				return Recipe.findOneAndUpdate({ title: 'Rigatoni alla Genovese'}, { duration: 100}, { new: true })
+					.then((recipe) => { return recipe.save(); })
+					.then(() => { console.log('Updated duration'); })
+					.catch((e) => { console.log('Error', e); });
 			})
-			.catch((e) => {	console.log('Error', e); });
-			
-	})
-	.catch((e) => { console.log('Error', e);});
+			.then(() => {
+				return Recipe.deleteOne( {title: 'Carrot Cake'})
+					.then(() => {
+						console.log('Deleted Carrot Cake'); 
+						mongoose.disconnect();
+					})
+					.catch((e) => {	console.log('Error', e); });
+
+					// CLOSE CONNECTION
+					process.on('SIGINT', () => {
+						mongoose.connection.close( () => {
+							console.log('Mongoose connection closed');
+							process.exit(0);
+						} )
+					})
+			})
+			.catch((e) => { console.log('Error', e);});
+
+	}).catch(err => {
+		console.error('Error connecting to mongo', err)
+	});
 
 
-process.on('SIGINT', () => {
-	mongoose.connection.close( () => {
-		console.log('Mongoose connection closed');
-		process.exit(0);
-	} )
-})
+
 
 
 
